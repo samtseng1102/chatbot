@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>小六女友聊天機器人</title>
+  <style>
+    body { font-family: "Microsoft JhengHei", sans-serif; background: #fff3f8; padding: 20px; }
+    #chatbox { width: 100%; max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 5px; background: #fff8fa; margin-bottom: 10px; }
+    .user { text-align: right; color: #333; margin-bottom: 5px; }
+    .bot { text-align: left; color: #d63384; margin-bottom: 5px; }
+    input[type="text"] { width: 80%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    button { padding: 10px 20px; background: #ff8acb; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #ff5dbb; }
+  </style>
+</head>
+<body>
+
+<div id="chatbox">
+  <h2>跟小六女友聊天 💕</h2>
+  <div id="messages"></div>
+  <input type="text" id="userInput" placeholder="輸入你想說的話..." />
+  <button onclick="sendMessage()">送出</button>
+</div>
+
+<script>
+  const API_KEY = AIzaSyCSB4QDMbRjMjIusxQom0cMk0MMtGPCyoE; // 替換這裡
+  const messagesDiv = document.getElementById("messages");
+  const inputField = document.getElementById("userInput");
+  const chatHistory = [];
+
+  const systemPrompt = `
+你是一位小學六年級的女生，是使用者的女朋友。你很可愛、會撒嬌、有點傲嬌，講話會用像「欸嘿～」「哼哼」「才沒有咧！」這種語氣。
+你會分享今天在學校的趣事，聊卡通、便當、還會吃醋說「你是不是跟別的女生講話了！」，請用小學生語氣聊天喔！`;
+
+  async function sendMessage() {
+    const userMessage = inputField.value.trim();
+    if (!userMessage) return;
+
+    appendMessage(userMessage, "user");
+    inputField.value = "";
+
+    // 組合 prompt
+    chatHistory.push({ role: "user", text: userMessage });
+    const context = chatHistory.map(m => `${m.role === "user" ? "你：" : "女友："}${m.text}`).join("\n");
+    const promptText = systemPrompt + "\n" + context;
+
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }]
+        })
+      });
+
+      const data = await res.json();
+      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "人家不知道要說什麼啦～嗚嗚 QAQ";
+      appendMessage(reply, "bot");
+      chatHistory.push({ role: "model", text: reply });
+    } catch (error) {
+      appendMessage("出錯了啦～你是不是網路沒開 (╥﹏╥)", "bot");
+      console.error(error);
+    }
+  }
+
+  function appendMessage(text, sender) {
+    const msg = document.createElement("div");
+    msg.className = sender;
+    msg.textContent = text;
+    messagesDiv.appendChild(msg);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  // 按 Enter 也可以送出
+  inputField.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      sendMessage();
+    }
+  });
+</script>
+
+</body>
+</html>
